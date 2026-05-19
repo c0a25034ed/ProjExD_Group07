@@ -64,13 +64,15 @@ class Bird():
         self.vy = 0     #縦方向速度
         self.gravity = 1
         self.jumping = False    #ジャンプ中か？の判定のため。初期はジャンプしていない
+        self.jump_count = 0      # 現在のジャンプ回数
+        self.max_jump = 2        # 最大2段ジャンプ
 
         #こうかとんの無敵技用
 
         self.state = "normal"
         self.hyper_life = 500
 
-    def update(self, screen):
+    def update(self, screen, platforms):
         key_lst = pg.key.get_pressed()
 
         if key_lst[pg.K_LEFT]:
@@ -87,11 +89,25 @@ class Bird():
 
         self.vy += self.gravity
         self.rect.y += self.vy
+
+    
+
         if self.rect.y >= GROUND + 140:
             self.rect.y = GROUND + 140
             self.vy = 0
             self.jumping = False
+            self.jump_count = 0   # ジャンプ回数リセット
+            
 
+    # 足場判定
+        for platform in platforms:
+         # 上から落ちてきたときのみ乗れる
+            if self.rect.colliderect(platform.rect):
+                if self.vy >= 0 and self.rect.bottom <= platform.rect.bottom:
+                    self.rect.bottom = platform.rect.top
+                    self.vy = 0
+                    self.jumping = False
+                    self.jump_count = 0   # 足場に乗ったらリセット
         screen.blit(self.rk_img, self.rect)
 
 
@@ -185,6 +201,29 @@ class Icicle(pg.sprite.Sprite):
         self.rect.y += self.vy
 
         if self.rect.top > HEIGHT:
+            self.kill()
+
+class Platform(pg.sprite.Sprite):
+    """
+    こうかとんが乗れる足場
+    """
+    def __init__(self, x, y, w=180, h=20):
+        super().__init__()
+
+        self.image = pg.Surface((w, h))
+        self.image.fill((139, 69, 19))  # 茶色
+
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+        self.vx = -6   # 背景に合わせて左へ移動
+
+    def update(self):
+        self.rect.x += self.vx
+
+        # 画面外に出たら消す
+        if self.rect.right < 0:
             self.kill()
 # class Score:
 #     """
@@ -433,6 +472,7 @@ def main():
     exps = pg.sprite.Group()
     # emys = pg.sprite.Group()
     obstacle = pg.sprite.Group()
+    platforms = pg.sprite.Group()
     icicles = pg.sprite.Group()
 
     life = Life(5)      
@@ -446,6 +486,10 @@ def main():
             obstacle.add(Obstacle())
             if tmr % 80 == 0:
                 icicles.add(Icicle())
+        # 足場生成
+        if tmr % 180 == 0:
+            y = random.randint(250, 450)
+            platforms.add(Platform(WIDTH, y))
 
         #ステージ名表示のため一時停止
         if tmr == 0:
@@ -507,11 +551,12 @@ def main():
         for event in pg.event.get():
             if event.type == pg.QUIT: return
 
-            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:    #ジャンプ
-                if bird.jumping == False:
-                    #どれだけ高くジャンプするのか？
+            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
+                # 2回までジャンプ可能
+                if bird.jump_count < bird.max_jump:
                     bird.vy = -15
                     bird.jumping = True
+                    bird.jump_count += 1
                     
 
         
@@ -610,7 +655,7 @@ def main():
                 return
         maps.update(screen, tmr)
 
-        bird.update(screen)
+        bird.update(screen, platforms)
 
         # beams.update()
         # beams.draw(screen)
@@ -622,6 +667,9 @@ def main():
         exps.draw(screen)
         # score.update(screen)  
         life.update(screen)
+
+        platforms.update()
+        platforms.draw(screen)
         
         obstacle.update()
         obstacle.draw(screen)
