@@ -438,8 +438,9 @@ def main():
         #障害物
         if tmr % 60 == 0:
             obstacle.add(Obstacle())
-            if tmr % 80 == 0:
-                icicles.add(Icicle())
+        # 夕方ステージだけつらら生成
+        if 2000 <= tmr < 4000 and tmr % 80 == 0:
+            icicles.add(Icicle())
 
         #ステージ名表示のため一時停止
         if tmr == 0:
@@ -478,8 +479,12 @@ def main():
             pg.display.update()
             time.sleep(3)
 
-        if tmr >= 4000 and tmr % 80 == 0:
-            icicles.add(Icicle())
+        if tmr == 4000:
+        #初期設定に戻す
+            bird.rect.x = 50
+            bird.rect.y = GROUND + 140
+            bird.vy = 0
+            bird.jumping = False
 
             #障害物も消す
             obstacle.empty()
