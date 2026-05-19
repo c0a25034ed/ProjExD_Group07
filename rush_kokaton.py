@@ -85,8 +85,11 @@ class Bird():
 class Map():
     def __init__(self):
         self.bg1_img = pg.image.load("fig/pg2_bg.png")
+        self.bg1_img_flip = pg.transform.flip(self.bg1_img,True,False)
         self.bg2_img = pg.image.load("fig/pg4_bg.png")
+        self.bg2_img_flip = pg.transform.flip(self.bg2_img,True,False)
         self.bg3_img = pg.image.load("fig/pg3_bg.png")
+        self.bg3_img_flip = pg.transform.flip(self.bg3_img,True,False)
 
         self.x1 = 0     #一枚目の背景
         self.x2 = 1672 #二枚目の背景 画像の大きさが1672だった
@@ -107,13 +110,16 @@ class Map():
         #背景画像
         if time <= 2000:
             bg = self.bg1_img
+            bg_flip = self.bg1_img_flip
         elif time <= 4000:
             bg = self.bg2_img
+            bg_flip = self.bg2_img_flip
         else:
             bg = self.bg3_img
+            bg_flip = self.bg3_img_flip
 
         screen.blit(bg, (self.x1, 0))
-        screen.blit(bg, (self.x2, 0))
+        screen.blit(bg_flip, (self.x2, 0))
 
         #画面外判定
         if self.x1 <= -1672:
@@ -412,7 +418,7 @@ def main():
             title_shade.set_alpha(180)
             screen.blit(title_shade, (350, 250))
             font = pg.font.Font(None, 80)
-            txt = font.render("Morng stage", True, (0, 255, 255))
+            txt = font.render("Morning stage", True, (0, 255, 255))
             screen.blit(txt, (400, 300))
             pg.display.update()
             time.sleep(3)
