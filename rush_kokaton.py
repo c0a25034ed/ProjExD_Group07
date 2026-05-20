@@ -689,7 +689,6 @@ def main():
         bird.update(screen, platforms)
         if tmr >= 6000:
             boss.update(screen)
-
         # beams.update()
         # beams.draw(screen)
         # emys.update()
