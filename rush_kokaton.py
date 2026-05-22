@@ -397,8 +397,6 @@ class Bomb(pg.sprite.Sprite):
         self.image.set_colorkey((0, 0, 0))
         self.rect = self.image.get_rect()
 
-        self.rect.center = bird.rect.center
-
         #こうかとんが動ける範囲をランダムに爆発する
         self.rect.center = (
             random.randint(50, 350) + triple,
@@ -425,6 +423,34 @@ class Bomb(pg.sprite.Sprite):
         if self.bom_timer >= 250:
             self.bom_status == "normal"
             self.kill()
+
+
+class Hp():
+    """
+    ボスの体力と体力ゲージを生成するクラス
+    """
+    def __init__(self):
+        
+
+        #hpバーの後ろにある黒い長方形（見やすいようにするため）
+        self.image = pg.Surface((500, 50))
+        self.image.fill((255, 255, 255))
+        self.rect = self.image.get_rect()
+        self.rect.center = (850, 30)
+        
+        #本当のHPバー
+        self.image2 = pg.Surface((490, 40))
+        self.image2.fill((255, 0, 0))
+        self.rect2 = self.image2.get_rect()
+        self.rect2.center = (850, 30)
+
+        #ボスの必殺技後のダウン状態のためのstatus
+        self.hp_status = "normal"
+
+    def update(self, screen):
+        screen.blit(self.image, self.rect)
+        screen.blit(self.image2, self.rect2)
+        
 
 
 class Life():
@@ -461,6 +487,7 @@ def main():
     # score = Score()
     bird = Bird()
     boss = Boss()
+    hp = Hp()
 
     bombs = pg.sprite.Group()
     # beams = pg.sprite.Group()
@@ -689,6 +716,7 @@ def main():
         bird.update(screen, platforms)
         if tmr >= 6000:
             boss.update(screen)
+            hp.update(screen)
         # beams.update()
         # beams.draw(screen)
         # emys.update()
