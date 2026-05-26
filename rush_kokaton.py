@@ -303,7 +303,7 @@ def main():
     screen = pg.display.set_mode((1100, 650))
     clock  = pg.time.Clock()
     move = 0
-    tmr = 4000
+    tmr = 0
     maps = Map()    #マップを切り替えるため
     x = 0 #練習5
 
