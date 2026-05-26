@@ -9,7 +9,6 @@ WIDTH = 1100  # ゲームウィンドウの幅
 HEIGHT = 650  # ゲームウィンドウの高さ
 GROUND = 300  # 地面の高さ
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
-pg.mixer.init()
 
 
 def check_bound(obj_rct: pg.Rect) -> tuple[bool, bool]:
@@ -36,7 +35,6 @@ def calc_orientation(org: pg.Rect, dst: pg.Rect) -> tuple[float, float]:
     x_diff, y_diff = dst.centerx-org.centerx, dst.centery-org.centery
     norm = math.sqrt(x_diff**2+y_diff**2)
     return x_diff/norm, y_diff/norm
-
 
 class Bird():
     """
@@ -81,13 +79,17 @@ class Bird():
 
         self.vy += self.gravity
         self.rect.y += self.vy
+
+    
+
         if self.rect.y >= GROUND + 140:
             self.rect.y = GROUND + 140
             self.vy = 0
             self.jumping = False
             self.jump_count = 0   # ジャンプ回数リセット
+            
 
-        # 足場判定
+    # 足場判定
         for platform in platforms:
          # 上から落ちてきたときのみ乗れる
             if self.rect.colliderect(platform.rect):
@@ -96,7 +98,16 @@ class Bird():
                     self.vy = 0
                     self.jumping = False
                     self.jump_count = 0   # 足場に乗ったらリセット
-
+        screen.blit(self.rk_img, self.rect)
+    def change_img(self, num: int, screen: pg.Surface):
+        """ 
+        こうかとんの画像を切り替えるメソッド 
+        """
+        try:
+            self.k_img = pg.image.load(f"fig/{num}.png")
+            self.rk_img = pg.transform.flip(self.k_img, True, False)
+        except Exception:
+            pass
         screen.blit(self.rk_img, self.rect)
 
 
@@ -169,7 +180,6 @@ class Obstacle(pg.sprite.Sprite):
         if self.rect.right < 0:     #画面外出たら消す
             self.kill()
 
-
 class Icicle(pg.sprite.Sprite):
     """
     上から落ちてくるつらら
@@ -189,7 +199,6 @@ class Icicle(pg.sprite.Sprite):
             self.rect.y += self.vy
         if self.rect.top > HEIGHT:
             self.kill()
-
 
 class Platform(pg.sprite.Sprite):
     """
@@ -284,7 +293,6 @@ class Beam(pg.sprite.Sprite):
          self.rect.move_ip(self.speed*self.vx, self.speed*self.vy)
          if check_bound(self.rect) != (True, True):
              self.kill()
-
 
 
 class Explosion(pg.sprite.Sprite):
@@ -408,6 +416,11 @@ class Hp():
     ボスの体力と体力ゲージを生成するクラス
     """
     def __init__(self):
+        self.max_hp = 30
+        self.hp = self.max_hp
+
+        self.hp_status = "normal"
+        self.down_time = 0
         
 
         #hpバーの後ろにある黒い長方形（見やすいようにするため）
@@ -416,16 +429,43 @@ class Hp():
         self.rect = self.image.get_rect()
         self.rect.center = (850, 30)
         
-        #本当のHPバー
-        self.image2 = pg.Surface((490, 40))
-        self.image2.fill((255, 0, 0))
-        self.rect2 = self.image2.get_rect()
-        self.rect2.center = (850, 30)
 
         #ボスの必殺技後のダウン状態のためのstatus
         self.hp_status = "normal"
 
+    def damage(self, atk):
+        """
+        atkはmainの衝突判定で定義する
+        """
+        if self.hp < 0:
+            self.hp = 0
+            return
+
+        if self.hp_status == "normal":
+            self.hp -= atk
+        elif self.hp_status == "down":
+            self.hp -= atk * 5
+
     def update(self, screen):
+
+        parcent_hp = self.hp / self.max_hp
+        current_hp = 490 * parcent_hp
+
+        self.image2 = pg.Surface((current_hp, 40))
+        if self.hp_status == "normal":
+            self.image2.fill((255, 0, 0))
+        if self.hp_status == "down":
+            self.image2.fill((0, 0, 255))
+        self.rect2 = self.image2.get_rect()
+        self.rect2.center = (850, 30)
+
+        if self.hp_status == "down":
+            self.down_time += 1
+
+        if self.down_time >= 300:
+            self.hp_status = "normal"
+            self.down_time = 0
+
         screen.blit(self.image, self.rect)
         screen.blit(self.image2, self.rect2)
         
@@ -451,13 +491,38 @@ class Life():
             y = HEIGHT - 600
             screen.blit(self.img, (x, y))
 
+class GameOver:
+    """
+    ゲームオーバー画面を管理するクラス
+    """
+    def __init__(self):
+        # 1. 「Game Over」の文字をあらかじめ準備しておく
+        self.font = pg.font.Font(None, 100)
+        self.text = self.font.render("Game Over", True, (255, 0, 0))
+        
+        # 2. 画面を暗くするための半透明の黒いパネルを作っておく
+        self.shade = pg.Surface((1100, 650))  # WIDTH, HEIGHTの大きさ
+        self.shade.fill((0, 0, 0))
+        self.shade.set_alpha(150)  # 透明度（0〜255）
+
+    def run(self, screen, bird):
+        """ 
+        ゲームオーバー画面を実際に描画して、ゲームを止めるメソッド 
+        """
+        screen.blit(self.shade, (0, 0))
+        screen.blit(self.text, [1100 // 2 - 180, 650 // 2 - 50])
+        bird.change_img(8, screen)
+        pg.display.update()
+        time.sleep(2)
+
             
+
 def main():
     pg.display.set_caption("走れ！こうかとん")
     screen = pg.display.set_mode((1100, 650))
     clock  = pg.time.Clock()
     move = 0
-    tmr = 2000
+    tmr = 6000
     maps = Map()    #マップを切り替えるため
     x = 0 #練習5
 
@@ -465,18 +530,23 @@ def main():
     bird = Bird()
     boss = Boss()
     hp = Hp()
+    gameover = GameOver()
+
 
     bombs = pg.sprite.Group()
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
-    obstacle = pg.sprite.Group()
+    # emys = pg.sprite.Group()
     beam_ene = pg.sprite.Group()
-    life = Life(1000)      
+    obstacle = pg.sprite.Group()
     platforms = pg.sprite.Group()
     icicles = pg.sprite.Group()
-    life = Life(5)      
+
+    life = Life(10)      
     attack_count = 0
     bomb_cooldown = 0
+
+    boss_down = 0
 
     while True:
 
@@ -484,26 +554,33 @@ def main():
 
 
         if tmr >= 6100:
+            if hp.hp_status == "normal":
 
-            #爆弾が画面上になければ、生成する
-            if len(bombs) == 0 and bomb_cooldown >= 200 and attack_count < 3:
-                bombs.add(Bomb(boss, bird))
-                bomb_cooldown = 0
-                attack_count += 1
+                #爆弾が画面上になければ、生成する
+                if len(bombs) == 0 and bomb_cooldown >= 200 and attack_count < 3:
+                    bombs.add(Bomb(boss, bird))
+                    bomb_cooldown = 0
+                    attack_count += 1
 
-            #bombの処理　爆発を三回させるかどうか
-            if len(bombs) == 0 and attack_count >= 3:
-                #重なってしまうので、ずれた場所に生成する
-                bombs.add(Bomb(boss, bird, -50))
-                bombs.add(Bomb(boss, bird, 0))
-                bombs.add(Bomb(boss, bird, 50))
-                attack_count = 0
+                #bombの処理　爆発を三回させるかどうか
+                if len(bombs) == 0 and attack_count >= 3:
+                    #重なってしまうので、ずれた場所に生成する
+                    bombs.add(Bomb(boss, bird, -50))
+                    bombs.add(Bomb(boss, bird, 0))
+                    bombs.add(Bomb(boss, bird, 50))
+                    attack_count = 0
+                    hp.hp_status = "down"
+                    boss_down = 1
+
+            if hp.hp_status == "down":
+                boss_down += 1
+                if boss_down >= 300:
+                    hp.hp_status = "normal"
+                    boss_down = 0
 
         #障害物
         if tmr % 60 == 0:
             obstacle.add(Obstacle())
-        if tmr % 50 ==0 and tmr >= 4000:
-            beam_ene.add(Beam_en())
         # 夕方ステージだけつらら生成
         if 2000 <= tmr < 4000 and tmr % 100 == 0:
             ice_x = random.randint(50, 190)
@@ -516,9 +593,7 @@ def main():
             y = random.randint(250, 450)
             platforms.add(Platform(WIDTH, y))
 
-
         #ステージ名表示のため一時停止
-        
         if tmr == 0:
             bg1_img = pg.image.load("fig/pg2_bg.png")
             screen.blit(bg1_img, (0, 0))
@@ -557,7 +632,7 @@ def main():
             screen.blit(txt, (400, 300))
             pg.display.update()
             time.sleep(3)
-            pg.mixer.music.load("sounds/stage1~2.mp3")
+            pg.mixer.music.load("sounds/stage1~2.mp3") # 音源の読み込み
             pg.mixer.music.play(-1) # bgmの再生
 
         if tmr == 4000:
@@ -572,8 +647,7 @@ def main():
             obstacle.empty()
             #背景がステージコールの時に反映されないからここで
             screen.blit(maps.bg3_img, (0, 0))
-            if tmr % 50 == 0:
-                beam_ene.add(Beam_en())
+
             title_shade = pg.Surface((430, 150))
             title_shade.fill((0, 0, 0))
             title_shade.set_alpha(180)
@@ -606,8 +680,20 @@ def main():
         for event in pg.event.get():
             if event.type == pg.QUIT: return
         for obst in pg.sprite.groupcollide(obstacle, beams, True, True).keys():
-            exps.add(Explosion(obst, 50))  # 障害物の位置に爆発エフェクトを発生させる
+            exps.add(Explosion(obst, 50))  # 障害物の位置に爆発エフェクトを発生させる 
 
+        #グループからbombを取り出して、bom_statusが
+        #"explosion"の時だけ衝突判定させる
+        for bomb in bombs:
+            if bomb.bom_status == "explosion":
+                for bomb in pg.sprite.spritecollide(bird, bombs, True):
+                    exps.add(Explosion(bomb, 50))
+                    life.num -= 1
+                    pg.display.update()
+                    if life.num <= 0:
+                        time.sleep(2)
+                        return  
+            
         for obstacles in pg.sprite.spritecollide(bird, obstacle, True):
             exps.add(Explosion(obstacles, 50))
             #こうかとん悲しみエフェクト
@@ -616,30 +702,41 @@ def main():
             life.num -= 1       #ここでlifeを減らす
             pg.display.update()
             if life.num <= 0:
-                time.sleep(2)
+                gameover.run(screen, bird) 
                 return  
-
+            
             # つららとの当たり判定
         for icicle in pg.sprite.spritecollide(bird, icicles, True):
             exps.add(Explosion(icicle, 50))
             life.num -= 1
-            pg.display.update()
-                
+            pg.display.update()    
             if life.num <= 0:
-                time.sleep(2)
+                gameover.run(screen, bird) 
                 return
+            
+        for beam in pg.sprite.spritecollide(boss, beams, True):
+            exps.add(Explosion(beam, 50))
+            hp.damage(3)
+            if(hp.hp <= 0):
+                return
+            pg.display.update()
+            
+        
+
 
         for beam_en in pg.sprite.spritecollide(bird, beam_ene, True):
             exps.add(Explosion(beam_en, 50))
             life.num -= 1
-            pg.display.update()
-                
+            pg.display.update()    
             if life.num <= 0:
-                time.sleep(2)
-                return        
+                gameover.run(screen, bird)
+                return       
+            
+        if(hp.hp <= 0):
+            return
+
         maps.update(screen, tmr)
 
-      
         bird.update(screen, platforms)
         if tmr >= 6000:
             boss.update(screen)
@@ -663,9 +760,9 @@ def main():
 
         bombs.update()
         bombs.draw(screen)
-
         if bird.beam_cooldown > 0:
-            bird.beam_cooldown -= 1
+             bird.beam_cooldown -= 1
+
         pg.display.update()
         tmr += 1        
         clock.tick(50) #FPSはこれ フレーム数。50フレームで1秒を表すということ
