@@ -37,7 +37,6 @@ def calc_orientation(org: pg.Rect, dst: pg.Rect) -> tuple[float, float]:
     norm = math.sqrt(x_diff**2+y_diff**2)
     return x_diff/norm, y_diff/norm
 
-
 class Bird():
     """
     ゲームキャラクター（こうかとん）に関するクラス
@@ -97,6 +96,16 @@ class Bird():
                     self.jumping = False
                     self.jump_count = 0   # 足場に乗ったらリセット
 
+        screen.blit(self.rk_img, self.rect)
+    def change_img(self, num: int, screen: pg.Surface):
+        """ 
+        こうかとんの画像を切り替えるメソッド 
+        """
+        try:
+            self.k_img = pg.image.load(f"fig/{num}.png")
+            self.rk_img = pg.transform.flip(self.k_img, True, False)
+        except Exception:
+            pass
         screen.blit(self.rk_img, self.rect)
 
 
@@ -454,6 +463,30 @@ class Life():
             y = HEIGHT - 600
             screen.blit(self.img, (x, y))
 
+class GameOver:
+    """
+    ゲームオーバー画面を管理するクラス
+    """
+    def __init__(self):
+        # 1. 「Game Over」の文字をあらかじめ準備しておく
+        self.font = pg.font.Font(None, 100)
+        self.text = self.font.render("Game Over", True, (255, 0, 0))
+        
+        # 2. 画面を暗くするための半透明の黒いパネルを作っておく
+        self.shade = pg.Surface((1100, 650))  # WIDTH, HEIGHTの大きさ
+        self.shade.fill((0, 0, 0))
+        self.shade.set_alpha(150)  # 透明度（0〜255）
+
+    def run(self, screen, bird):
+        """ 
+        ゲームオーバー画面を実際に描画して、ゲームを止めるメソッド 
+        """
+        screen.blit(self.shade, (0, 0))
+        screen.blit(self.text, [1100 // 2 - 180, 650 // 2 - 50])
+        bird.change_img(8, screen)
+        pg.display.update()
+        time.sleep(2)
+
             
 def main():
     pg.display.set_caption("走れ！こうかとん")
@@ -469,6 +502,7 @@ def main():
     bird = Bird()
     boss = Boss()
     hp = Hp()
+    gameover = GameOver()
 
     bombs = pg.sprite.Group()
     beams = pg.sprite.Group()
@@ -611,7 +645,7 @@ def main():
             if event.type == pg.QUIT: return
         for obst in pg.sprite.groupcollide(obstacle, beams, True, True).keys():
             exps.add(Explosion(obst, 50))  # 障害物の位置に爆発エフェクトを発生させる
-        
+            
                 
                      
 
@@ -688,6 +722,7 @@ def main():
 
         # for bomb in pg.sprite.groupcollide(shield, bombs, True, True):      #課題５　防御壁
         #     exps.add(Explosion(bomb, 50))
+        
 
         for obstacles in pg.sprite.spritecollide(bird, obstacle, True):
             exps.add(Explosion(obstacles, 50))
@@ -697,27 +732,25 @@ def main():
             life.num -= 1       #ここでlifeを減らす
             pg.display.update()
             if life.num <= 0:
-                time.sleep(2)
+                gameover.run(screen, bird) 
                 return  
 
             # つららとの当たり判定
         for icicle in pg.sprite.spritecollide(bird, icicles, True):
             exps.add(Explosion(icicle, 50))
             life.num -= 1
-            pg.display.update()
-                
+            pg.display.update()    
             if life.num <= 0:
-                time.sleep(2)
+                gameover.run(screen, bird) 
                 return
 
         for beam_en in pg.sprite.spritecollide(bird, beam_ene, True):
             exps.add(Explosion(beam_en, 50))
             life.num -= 1
-            pg.display.update()
-                
+            pg.display.update()    
             if life.num <= 0:
-                time.sleep(2)
-                return        
+                gameover.run(screen, bird)
+                return       
         maps.update(screen, tmr)
 
       
