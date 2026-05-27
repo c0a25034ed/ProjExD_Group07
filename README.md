@@ -1,5 +1,7 @@
-# 飛ぶな！走れ！こうかとん！
-
+# 飛べ！走れ！こうかとん！
+![asa](fig/asa.png)
+![noon](fig/noon.png)
+![yoru](fig/yoru.png/)
 ## 実行環境の必要条件
 * python >= 3.10
 * pygame >= 2.1
